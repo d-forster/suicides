@@ -1,2 +1,2 @@
 # suicides
- Analysis of suicide data v socioeconomic data
+Experiment in linear regression with data on suicide rates in various countries, along with their socioeconomic data.
