@@ -19,8 +19,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings
+from cycler import cycler
 
 warnings.filterwarnings("ignore")
+
 
 # Reading dataset
 train_file_path = "./input/master.csv"
@@ -55,28 +57,6 @@ DATA VISUALIZATION
 ******************
 '''
 
-
-# First, amount of data by country:
-plt.figure(figsize=(10,20))
-sns.countplot(y='country', data=dataset_df, alpha=0.7)
-plt.title("Amount of data by country")
-plt.ylabel("Country")
-plt.xlabel("Amount of data points")
-plt.tight_layout()
-plt.savefig("./output/data_by_country.png")
-print("Data by country plot complete.")
-
-# Now GDP by country
-
-def get_cmap(n, name='hsv'):
-    """Returns a function that maps each index 0, 1, ..., n-1 to a distinct RGB color. The keyword argument "name" must be a standard mp1 colormap name.
-
-    Args:
-        n (int): The number of indices to be used.
-        name (str, optional): The name od the mp1 colormap to be used. Defaults to 'hsv'.
-    """
-    return plt.cm.get_cmap(name, n)
-
 def improve_legend(ax=None):
     """Adds labels to the end of each line according to the legend.
 
@@ -103,52 +83,6 @@ def improve_legend(ax=None):
         )
     ax.legend().set_visible(False)
 
-country_gdp_years = dataset_df[["country", "year", "gdp_for_year"]].drop_duplicates()
-# print(country_gdp_years)
-plt.rcParams.update({'font.size': 22})
-plt.figure(figsize=(40,40))
-plt.ylim([min(country_gdp_years['gdp_for_year']), max(country_gdp_years['gdp_for_year'])])
-plt.xlim([min(country_gdp_years['year']), max(country_gdp_years['year'])])
-colormap = get_cmap(unique_countries)
-for i, country in enumerate(country_gdp_years['country'].drop_duplicates()):
-    select_country_data = country_gdp_years[country_gdp_years['country'] == country]
-    plt.plot(select_country_data['year'], select_country_data['gdp_for_year'], label=str(country), c=colormap(i), linewidth=2)
-# print(last_years)
-plt.legend()
-improve_legend()
-plt.xlabel("Year")
-plt.ylabel("GDP ($10^{13}$ USD)")
-plt.title("GDP for each country over time")
-plt.tight_layout()
-plt.savefig("./output/GDP_by_country.png")
-print("GDP by country plot complete.")
-
-# Redo of the above, but remove the top few countries to see the bottom end more clearly.
-trimmed_country_gdp_years = country_gdp_years[(country_gdp_years['country'] != 'United States') & 
-                                              (country_gdp_years['country'] != 'France') &
-                                              (country_gdp_years['country'] != 'United Kingdom') &
-                                              (country_gdp_years['country'] != 'Germany') &
-                                              (country_gdp_years['country'] != 'Japan')]
-# print("Is USA present in trimmed GDP data?: --> {}".format('United States' in trimmed_country_gdp_years['country']))
-
-plt.figure(figsize=(40,40))
-plt.ylim([min(trimmed_country_gdp_years['gdp_for_year']), max(trimmed_country_gdp_years['gdp_for_year'])])
-plt.xlim([min(trimmed_country_gdp_years['year']), max(trimmed_country_gdp_years['year'])])
-colormap = get_cmap(len(trimmed_country_gdp_years['country'].drop_duplicates()))
-for i, country in enumerate(trimmed_country_gdp_years['country'].drop_duplicates()):
-    trimmed_select_country_data = trimmed_country_gdp_years[trimmed_country_gdp_years['country'] == country]
-    plt.plot(trimmed_select_country_data['year'], trimmed_select_country_data['gdp_for_year'], label=str(country), c=colormap(i), linewidth=2)
-plt.legend()
-improve_legend()
-plt.xlabel("Year")
-plt.ylabel("GDP ($10^{12}$ USD)")
-plt.title("GDP for trimmed list of countries over time")
-plt.tight_layout()
-plt.savefig("./output/GDP_by_country_trimmed.png")
-print("Trimmed GDP by country plot complete.")
-
-# Now visualization of suicide rates (total no. of suicides / 100k pop) for each country:
-
 def calculate_avg_suicide(country_year):
     """Calculates the total number of suicides per 100k population for a given country in a given year.
 
@@ -163,12 +97,58 @@ def calculate_avg_suicide(country_year):
     cysubset = dataset_df[dataset_df['country-year'] == country_year]
     country = cysubset['country'].loc[cysubset.index[0]]
     year = cysubset['year'].loc[cysubset.index[0]]
-    avg = sum(cysubset['suicides/100k'])
+    avg = (sum(cysubset['suicides_no']) / sum(cysubset['population'])) * 100000
     return [country, year, avg]
-    
+
+def multiplot(dataset=dataset_df, x='', y='', z='', xlabel='', ylabel='', title='', figsize=(40,40), filename=''):
+    fig, ax = plt.subplots(figsize=figsize)
+    ax.set_ylim(min(dataset[y]), max(dataset[y]))
+    ax.set_xlim(min(dataset[x]), max(dataset[x]))
+    for i, w in enumerate(dataset[z].drop_duplicates()):
+        select_z = dataset[dataset[z] == w]
+        ax.plot(select_z[x], select_z[y], label=str(w), linewidth=2)
+    ax.legend()
+    improve_legend(ax=ax)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    fig.tight_layout()
+    fig.savefig('./output/'+filename+'.png')
+
+
+
+# First, amount of data by country:
+plt.figure(figsize=(10,20))
+sns.countplot(y='country', data=dataset_df, alpha=0.7)
+plt.title("Amount of data by country")
+plt.ylabel("Country")
+plt.xlabel("Amount of data points")
+plt.tight_layout()
+plt.savefig("./output/data_by_country.png")
+print("Data by country plot complete.")
+
+plt.rcParams.update({'font.size': 22})
+
+# Now GDP by country
+
+country_gdp_years = dataset_df[["country", "year", "gdp_for_year"]].drop_duplicates()
+multiplot(country_gdp_years, 'year', 'gdp_for_year', 'country', 'Year', 'GDP in USD', 'GDP for each country over time', (40,40), 'GDP_by_country')
+print("GDP by country plot complete.")
+
+# Redo of the above, but remove the top few countries to see the bottom end more clearly.
+trimmed_country_gdp_years = country_gdp_years[(country_gdp_years['country'] != 'United States') & 
+                                              (country_gdp_years['country'] != 'France') &
+                                              (country_gdp_years['country'] != 'United Kingdom') &
+                                              (country_gdp_years['country'] != 'Germany') &
+                                              (country_gdp_years['country'] != 'Japan')]
+multiplot(trimmed_country_gdp_years, 'year', 'gdp_for_year', 'country', 'Year', 'GDP in USD', 'Trimmed Countries GDP over time', (40,40), 'GDP_by_country_trimmed')
+print("Trimmed GDP by country plot complete.")
+
+# Now visualization of suicide rates (total no. of suicides / 100k pop) for each country: 
 
 avg_suicides = []
 for country_year in dataset_df['country-year'].drop_duplicates():
     avg_suicides.append(calculate_avg_suicide(country_year))
 
 avg_suicides_df = pd.DataFrame(avg_suicides, columns=['country', 'year', 'suicides/100k'])
+print(avg_suicides_df[avg_suicides_df['country'] == 'United States'])
