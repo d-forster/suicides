@@ -4,6 +4,14 @@ This file contains all of the code dealing with data analysis + representation.
 TODO 
 '''
 
+
+"""
+********************************************
+PREPARATION: imports, data loading, cleaning
+******************************************** 
+"""
+
+
 # Package imports
 import numpy as np
 import scipy as scp
@@ -40,8 +48,14 @@ dataset_df = dataset_df.rename(columns={'suicides/100k pop': 'suicides/100k',
 dataset_df['gdp_for_year'] = dataset_df['gdp_for_year'].replace(',','', regex=True)
 dataset_df['gdp_for_year'] = pd.to_numeric(dataset_df['gdp_for_year'])
 
-# Visualisation of raw data
-# 
+
+'''
+******************
+DATA VISUALIZATION
+******************
+'''
+
+
 # First, amount of data by country:
 plt.figure(figsize=(10,20))
 sns.countplot(y='country', data=dataset_df, alpha=0.7)
@@ -109,7 +123,7 @@ plt.tight_layout()
 plt.savefig("./output/GDP_by_country.png")
 print("GDP by country plot complete.")
 
-#Redo of the above, but remove the top few countries to see the bottom end more clearly.
+# Redo of the above, but remove the top few countries to see the bottom end more clearly.
 trimmed_country_gdp_years = country_gdp_years[(country_gdp_years['country'] != 'United States') & 
                                               (country_gdp_years['country'] != 'France') &
                                               (country_gdp_years['country'] != 'United Kingdom') &
@@ -132,3 +146,29 @@ plt.title("GDP for trimmed list of countries over time")
 plt.tight_layout()
 plt.savefig("./output/GDP_by_country_trimmed.png")
 print("Trimmed GDP by country plot complete.")
+
+# Now visualization of suicide rates (total no. of suicides / 100k pop) for each country:
+
+def calculate_avg_suicide(country_year):
+    """Calculates the total number of suicides per 100k population for a given country in a given year.
+
+    Args:
+        country_year (str): A country/year identification string from the original dataset.
+
+    Returns:
+        [country, year, avg] where 'country' and 'year' are the separated parts of the identifier and 'avg' is the total suicides per 100k population.
+    """    
+    if country_year == None:
+        print("No argument passed to calculate_avg_suicide!")
+    cysubset = dataset_df[dataset_df['country-year'] == country_year]
+    country = cysubset['country'].loc[cysubset.index[0]]
+    year = cysubset['year'].loc[cysubset.index[0]]
+    avg = sum(cysubset['suicides/100k'])
+    return [country, year, avg]
+    
+
+avg_suicides = []
+for country_year in dataset_df['country-year'].drop_duplicates():
+    avg_suicides.append(calculate_avg_suicide(country_year))
+
+avg_suicides_df = pd.DataFrame(avg_suicides, columns=['country', 'year', 'suicides/100k'])
