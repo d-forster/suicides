@@ -151,4 +151,5 @@ for country_year in dataset_df['country-year'].drop_duplicates():
     avg_suicides.append(calculate_avg_suicide(country_year))
 
 avg_suicides_df = pd.DataFrame(avg_suicides, columns=['country', 'year', 'suicides/100k'])
-print(avg_suicides_df[avg_suicides_df['country'] == 'United States'])
+multiplot(avg_suicides_df, 'year', 'suicides/100k', 'country', 'Year', 'Suicides per 100k population', 'Suicide rates in each country over time', (40,40), 'suicides_by_country')
+print("Suicides/100k by country plot complete.")
