@@ -33,11 +33,11 @@ dataset_df = pd.read_csv(train_file_path)
 # print(dataset_df.head(3))
 # print()
 
-unique_countries = len(dataset_df["country"].unique())
-unique_ages = len(dataset_df["age"].unique())
+num_countries = len(dataset_df["country"].unique())
+num_age_groups = len(dataset_df["age"].unique())
 first_year = min(dataset_df["year"])
 last_year = max(dataset_df["year"])
-# print("There are {} countries listed, with {} different age categories.\n".format(unique_countries, unique_ages))
+# print("There are {} countries listed, with {} different age categories.\n".format(num_countries, num_age_groups))
 # print("The data set covers the years {} to {}.\n".format(first_year, last_year))
 
 # Cleaning up data:
@@ -90,15 +90,17 @@ def calculate_avg_suicide(country_year):
         country_year (str): A country/year identification string from the original dataset.
 
     Returns:
-        [country, year, avg] where 'country' and 'year' are the separated parts of the identifier and 'avg' is the total suicides per 100k population.
+        [country, year, pop, avg] where 'country' and 'year' are the separated parts of the identifier, 'pop' is the population for that year
+        and 'avg' is the total suicides per 100k population.
     """    
     if country_year == None:
         print("No argument passed to calculate_avg_suicide!")
     cysubset = dataset_df[dataset_df['country-year'] == country_year]
     country = cysubset['country'].loc[cysubset.index[0]]
     year = cysubset['year'].loc[cysubset.index[0]]
-    avg = (sum(cysubset['suicides_no']) / sum(cysubset['population'])) * 100000
-    return [country, year, avg]
+    pop = sum(cysubset['population'])
+    avg = (sum(cysubset['suicides_no']) / pop) * 100000
+    return [country, year, pop, avg]
 
 def multiplot(dataset=dataset_df, x='', y='', z='', xlabel='', ylabel='', title='', figsize=(40,40), filename=''):
     fig, ax = plt.subplots(figsize=figsize)
@@ -150,6 +152,42 @@ avg_suicides = []
 for country_year in dataset_df['country-year'].drop_duplicates():
     avg_suicides.append(calculate_avg_suicide(country_year))
 
-avg_suicides_df = pd.DataFrame(avg_suicides, columns=['country', 'year', 'suicides/100k'])
-multiplot(avg_suicides_df, 'year', 'suicides/100k', 'country', 'Year', 'Suicides per 100k population', 'Suicide rates in each country over time', (40,40), 'suicides_by_country')
+avg_suicides_df = pd.DataFrame(avg_suicides, columns=['country', 'year', 'population', 'suicides/100k'])
+avg_suicides_df_compact = avg_suicides_df.drop('population', axis=1)
+multiplot(avg_suicides_df_compact, 'year', 'suicides/100k', 'country', 'Year', 'Suicides per 100k population', 'Suicide rates in each country over time', (40,40), 'suicides_by_country')
 print("Suicides/100k by country plot complete.")
+
+# What about the average suicide rate for each country?
+
+def calc_mean_suicide_rate(country=None):
+    if country == None:
+        print("Unable to calculate mean suicide rate - no country given.")
+    else:
+        result = 0
+        country_rate_data = pd.DataFrame(avg_suicides_df[avg_suicides_df['country'] == country])
+        total_pop = sum(country_rate_data['population'])
+        num_country_years = len(country_rate_data['year'])
+        for i in range(num_country_years):
+            country_year_pop = country_rate_data.iat[i, 2]
+            country_year_rate = country_rate_data.iat[i, 3]
+            result += ((country_year_pop / total_pop) * country_year_rate)
+        return result
+
+            
+mean_suicide_rates = []
+for country in dataset_df['country'].drop_duplicates():
+    avg_rate = calc_mean_suicide_rate(country)
+    mean_suicide_rates.append([country, avg_rate])
+mean_suicide_rates_df = pd.DataFrame(mean_suicide_rates, columns=['country', 'avg_suicides/100k'])
+# print(mean_suicide_rates_df.head())
+
+fig, ax = plt.subplots(figsize=(40,40))
+y_pos = np.arange(len(mean_suicide_rates_df['country']))
+ax.barh(y_pos, mean_suicide_rates_df['avg_suicides/100k'], align='center')
+ax.set_yticks(y_pos, labels = mean_suicide_rates_df['country'])
+ax.invert_yaxis()
+ax.set_xlabel('Weighted average of suicides per 100k')
+ax.set_title('Average suicide rate in each country')
+fig.tight_layout()
+fig.savefig('./output/avg_suicide_rate_by_country.png')
+print('Average suicide rate by country plot complete.')
