@@ -20,6 +20,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import warnings
 from cycler import cycler
+from scipy import stats
 
 warnings.filterwarnings("ignore")
 
@@ -181,13 +182,34 @@ for country in dataset_df['country'].drop_duplicates():
 mean_suicide_rates_df = pd.DataFrame(mean_suicide_rates, columns=['country', 'avg_suicides/100k'])
 # print(mean_suicide_rates_df.head())
 
-fig, ax = plt.subplots(figsize=(40,40))
+fig1, ax1 = plt.subplots(figsize=(40,40))
 y_pos = np.arange(len(mean_suicide_rates_df['country']))
-ax.barh(y_pos, mean_suicide_rates_df['avg_suicides/100k'], align='center')
-ax.set_yticks(y_pos, labels = mean_suicide_rates_df['country'])
-ax.invert_yaxis()
-ax.set_xlabel('Weighted average of suicides per 100k')
-ax.set_title('Average suicide rate in each country')
-fig.tight_layout()
-fig.savefig('./output/avg_suicide_rate_by_country.png')
+ax1.barh(y_pos, mean_suicide_rates_df['avg_suicides/100k'], align='center')
+ax1.set_yticks(y_pos, labels = mean_suicide_rates_df['country'])
+ax1.invert_yaxis()
+ax1.set_xlabel('Weighted average of suicides per 100k')
+ax1.set_title('Average suicide rate in each country')
+fig1.tight_layout()
+fig1.savefig('./output/avg_suicide_rate_by_country.png')
 print('Average suicide rate by country plot complete.')
+
+
+# Linear regression time! First, GDP against suicide rates... with one country?
+def get_gdp_with_rates(country=None):
+    if country == None:
+        print("Unable to retrieve GDP vs. suicide rates. No country given.")
+    else:
+        country_rate_data = avg_suicides_df_compact[avg_suicides_df_compact['country'] == country]
+        country_gdp_data = country_gdp_years[country_gdp_years['country'] == country]
+        return country_rate_data['suicides/100k'], country_gdp_data['gdp_for_year']
+
+irish_suicides, irish_gdp = get_gdp_with_rates('Ireland')
+# print("There are {} data points for Irish suicide rates, and {} data points for Irish GDP.".format(len(irish_suicides), len(irish_gdp)))
+slope, intercept, r, p, std_err = stats.linregress(irish_gdp, irish_suicides)
+
+def predict_suicides_by_gdp(x):
+    return slope * x + intercept
+
+fig2, ax2 = plt.subplots(figsize=(40,40))
+ax2.scatter(irish_gdp, irish_suicides)
+fig2.savefig('./output/gdp_vs_suicides_ireland.png')
